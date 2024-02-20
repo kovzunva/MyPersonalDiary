@@ -1,0 +1,10 @@
+﻿@model ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="text-center">
+    <h1 class="text-danger">Помилка</h1>
+    <h2 class="text-danger">@TempData["ErrorMessage"]</h2>
+    <a asp-controller="Home" asp-action="Index">Повернутись на головну сторінку</a>
+</div>

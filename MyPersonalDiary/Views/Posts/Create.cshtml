@@ -1,0 +1,29 @@
+﻿@model MyPersonalDiary.Models.Post
+
+@{
+    ViewData["Title"] = "Новий пост";
+}
+
+<h1>Новий пост</h1>
+
+<hr />
+<form asp-action="Create" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="form-group">
+        <label asp-for="Content" class="control-label">Вміст</label>
+        <textarea asp-for="Content" class="form-control no-enter" maxlength="500" rows="4"></textarea>
+        <span asp-validation-for="Content" class="text-danger"></span>
+    </div>
+    <div class="form-group mt-1">
+        <label asp-for="ImagePath" class="control-label">Картинка</label>
+        <input asp-for="ImagePath" class="form-control" type="file" />
+        <span asp-validation-for="ImagePath" class="text-danger"></span>
+    </div>
+    <div class="form-group text-end mt-2">
+        <input type="submit" value="Додати" class="btn btn-primary" />
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

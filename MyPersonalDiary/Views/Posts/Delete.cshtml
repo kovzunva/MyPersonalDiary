@@ -1,0 +1,53 @@
+﻿@model MyPersonalDiary.Models.Post
+
+@{
+    ViewData["Title"] = "Видалення посту";
+}
+
+<h1>Видалення посту</h1>
+
+<h3>Чи впевнені, що хочете видалити цей пост?</h3>
+<div>
+    <hr />
+    <div class="item-box mb-3">
+        <div class="row">
+            @if (!string.IsNullOrEmpty(Model.ImagePath))
+            {
+                <div class="col-sm-12 col-md-4 col-lg-3 d-flex align-items-center">
+                    <img src="@Url.Content("~/uploads/" + Model.ImagePath)"
+                         alt="@Html.DisplayFor(modelItem => Model.CreatedAt)">
+                </div>
+            }
+            <div class="col-sm-12
+                 @if (!string.IsNullOrEmpty(Model.ImagePath)) {
+                    <text>col-md-8 col-lg-9</text>
+                } d-flex align-items-center">
+                <div class="pl-2">
+                    <div class="row">
+                        <div class="col">
+                            <h4>
+                                @Html.DisplayFor(modelItem => Model.CreatedAt)
+                            </h4>
+                        </div>
+                        @if (Model.CanEditAndDelete)
+                        {
+                            <div class="col-auto">
+                                <div class="text-end">
+                                    <a asp-controller="Posts" asp-action="Edit" class="btn" asp-route-id="@Model.Id">Редагувати</a>
+                                    <a asp-controller="Posts" asp-action="Delete" class="btn" asp-route-id="@Model.Id">Видалити</a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <p>
+                        @Html.DisplayFor(modelItem => Model.Content)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form asp-action="Delete" class="text-end">
+        <input type="hidden" asp-for="Id" />
+        <input type="submit" value="Видалити" class="btn btn-danger" />
+    </form>
+</div>
