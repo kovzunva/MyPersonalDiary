@@ -15,6 +15,7 @@ using SixLabors.ImageSharp.Processing;
 using System.IO;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using Microsoft.Extensions.Hosting;
+using MyPersonalDiary.Services;
 
 namespace MyPersonalDiary.Controllers
 {
@@ -34,45 +35,41 @@ namespace MyPersonalDiary.Controllers
         }
 
         // GET: Posts
-        public async Task<IActionResult> Index()
+        [Route("/")]
+        public async Task<IActionResult> Index(int page = 1, string searchTerm = null, DateTime? fromDate = null, DateTime? toDate = null)
         {
-            var posts = await _context.Posts.Include(p => p.User).ToListAsync();
-            // Розшифрування
+            int pageSize = 5;
+            DateTime twoDaysAgo = DateTime.Now.AddDays(-2);
+
+            string currentUserName = User.Identity.Name;
+            var posts = await _context.Posts
+                .Include(p => p.User)
+                .Where(p => p.User.UserName == currentUserName)
+                .Where(p => fromDate == null || p.CreatedAt >= fromDate)
+                .Where(p => toDate == null || p.CreatedAt <= toDate)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+
             foreach (var post in posts)
             {
                 post.Content = encryptionService.Decrypt(post.Content);
-                if (post.ImagePath != null) post.ImagePath = encryptionService.Decrypt(post.ImagePath);
+                post.ImagePath = encryptionService.Decrypt(post.ImagePath);
+                post.CanEditAndDelete = post.CreatedAt >= twoDaysAgo;
             }
-            return View(posts);
-        }
 
-        // GET: Posts/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null || _context.Posts == null)
+            if (!string.IsNullOrEmpty(searchTerm))
             {
-                return NotFound();
+                posts = posts
+                .Where(p => p.Content.Contains(searchTerm))
+                .ToList();
             }
 
-            var post = await _context.Posts
-                .Include(p => p.User)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (post == null)
-            {
-                return NotFound();
-            }
+            var currentUrl = HttpContext.Request.Path + HttpContext.Request.QueryString;
+            var paginatedPosts = new PaginatedList<Post>(posts, page, pageSize, currentUrl);
+            ViewBag.PaginationString = paginatedPosts.GetPaginationString();
 
-            /* Розшифрування */
-            post.Content = encryptionService.Decrypt(post.Content);
-            if (post.ImagePath!=null) post.ImagePath = encryptionService.Decrypt(post.ImagePath);
+            return View(paginatedPosts);
 
-            return View(post);
-        }
-
-        // GET: Posts/Create
-        public IActionResult Create()
-        {
-            return View();
         }
 
         private async Task<string> SaveImage(IFormFile imageFile)
@@ -83,7 +80,6 @@ namespace MyPersonalDiary.Controllers
 
             using (var fileStream = new FileStream(filePath, FileMode.Create))
             {
-                // Зчитуємо файл в ImageSharp Image
                 using (var image = Image.Load(imageFile.OpenReadStream()))
                 {
                     // Перевіряємо розмір картинки та стискаємо, якщо потрібно
@@ -102,6 +98,12 @@ namespace MyPersonalDiary.Controllers
             }
 
             return uniqueFileName;
+        }
+
+        // GET: Posts/Create
+        public IActionResult Create()
+        {
+            return View();
         }
 
         // POST: Posts/Create
@@ -140,13 +142,13 @@ namespace MyPersonalDiary.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            // Вивести всі помилки валідації вручну
+            // Вивести всі помилки валідації
             ViewBag.ValidationErrors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
 
             return View(post);
         }
 
-        // GET: Posts/Edit/5
+        // GET: Posts/Edit
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null || _context.Posts == null)
@@ -185,7 +187,7 @@ namespace MyPersonalDiary.Controllers
             return View(post);
         }
 
-        // POST: Posts/Edit/5
+        // POST: Posts/Edit
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Content,ImagePath")] Post post,
@@ -244,7 +246,6 @@ namespace MyPersonalDiary.Controllers
                         {
                             System.IO.File.Delete(oldImagePath);
                         }
-                        else ViewBag.Message = "Картинка: "+existingPost.ImagePath;
                     }
 
                     _context.Entry(post).Property(x => x.UserId).IsModified = false;
@@ -253,14 +254,18 @@ namespace MyPersonalDiary.Controllers
                     // Оновлення і збереження нової картинки, якщо вона надійшла
                     if (ImagePath != null && ImagePath.Length > 0)
                     {
-                        post.ImagePath = await SaveImage(ImagePath);
-                        post.ImagePath = encryptionService.Encrypt(post.ImagePath);
+                        var newImagePath = await SaveImage(ImagePath);
+                        post.ImagePath = encryptionService.Encrypt(newImagePath);
+                        _context.Entry(existingPost).Entity.ImagePath = post.ImagePath;
                     }
                     else
-                    _context.Entry(post).Property(x => x.ImagePath).IsModified = false;
+                    {
+                        _context.Entry(existingPost).Property(x => x.ImagePath).IsModified = false;
+                    }
 
                     // Шифрування
                     post.Content = encryptionService.Encrypt(post.Content);
+                    _context.Entry(existingPost).Entity.Content = post.Content;
 
                     await _context.SaveChangesAsync();
                 }
@@ -280,7 +285,7 @@ namespace MyPersonalDiary.Controllers
             return View(post);
         }
 
-        // GET: Posts/Delete/5
+        // GET: Posts/Delete
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null || _context.Posts == null)
@@ -319,7 +324,7 @@ namespace MyPersonalDiary.Controllers
             return View(post);
         }
 
-        // POST: Posts/Delete/5
+        // POST: Posts/Delete
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -349,6 +354,15 @@ namespace MyPersonalDiary.Controllers
                     return View("Error");
                 }
 
+                if (!string.IsNullOrEmpty(post.ImagePath))
+                {
+                    var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads",
+                                encryptionService.Decrypt(post.ImagePath));
+                    if (System.IO.File.Exists(imagePath))
+                    {
+                        System.IO.File.Delete(imagePath);
+                    }
+                }
                 _context.Posts.Remove(post);
             }
             

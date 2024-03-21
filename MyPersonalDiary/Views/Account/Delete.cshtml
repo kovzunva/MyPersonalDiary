@@ -1,0 +1,10 @@
+﻿<h2>Видалення акаунту</h2>
+
+<form asp-action="Delete" method="post">
+    @Html.AntiForgeryToken()
+
+    <div>
+        <p>Ви впевнені, що хочете видалити акаунт? (можна скасувати впродовж 2-х днів)</p>
+        <button type="submit" class="btn btn-danger">Видалити акаунт</button>
+    </div>
+</form>

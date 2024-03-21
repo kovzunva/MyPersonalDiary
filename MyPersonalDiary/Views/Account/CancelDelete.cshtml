@@ -1,0 +1,12 @@
+﻿@model MyPersonalDiary.Models.User
+
+<h2>Видалення акаунту</h2>
+
+<form asp-action="CancelDelete" method="post">
+    @Html.AntiForgeryToken()
+
+    <div>
+        <p>Ваш акаунт буде видалено (@Model.DeleteAt)</p>
+        <button type="submit" class="btn btn-danger">Скасувати видалення</button>
+    </div>
+</form>

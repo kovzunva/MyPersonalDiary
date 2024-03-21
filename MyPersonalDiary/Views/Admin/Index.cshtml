@@ -1,0 +1,19 @@
+﻿@model IEnumerable<MyPersonalDiary.Models.RegistrationCode>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Адмінка | коди реєстрації</h1>
+
+<p>
+    <a href="#" id="createNewRegistrationCode">Згенерувати код реєстрації</a>
+</p>
+
+
+<ul id="codeList">
+    @foreach (var item in Model)
+    {
+        <li>@Url.Action("Register", "Account", new { registrationCode = item.Code }, "https")</li>
+    }
+</ul>

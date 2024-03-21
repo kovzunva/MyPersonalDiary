@@ -9,11 +9,21 @@ public class PaginatedList<T> : List<T>
     public int PageIndex { get; private set; }
     public int TotalPages { get; private set; }
     public string Route { get; private set; }
+    public string QueryString { get; private set; }
 
-    public PaginatedList(IQueryable<T> source, int pageIndex, int pageSize, string route)
+    // передається запит
+    public PaginatedList(IQueryable<T> source, int pageIndex, int pageSize, string currentUrl)
     {
+        QueryString = string.Empty;
+        int questionMarkIndex = currentUrl.IndexOf('?');
+        if (questionMarkIndex != -1)
+        {
+            Route = currentUrl.Substring(0, questionMarkIndex);
+            QueryString = "&" + currentUrl.Substring(questionMarkIndex + 1);
+        }
+        else Route = currentUrl;
+
         TotalPages = (int)Math.Ceiling(source.Count() / (double)pageSize);
-        Route = route;
         if (pageIndex < 1)
         {
             PageIndex = 1;
@@ -29,6 +39,36 @@ public class PaginatedList<T> : List<T>
 
         this.AddRange(source.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList());
     }
+
+    // передається список об'єктів
+    public PaginatedList(IEnumerable<T> items, int pageIndex, int pageSize, string currentUrl)
+    {
+        QueryString = string.Empty;
+        int questionMarkIndex = currentUrl.IndexOf('?');
+        if (questionMarkIndex != -1)
+        {
+            Route = currentUrl.Substring(0, questionMarkIndex);
+            QueryString = "&" + currentUrl.Substring(questionMarkIndex + 1);
+        }
+        else Route = currentUrl;
+
+        TotalPages = (int)Math.Ceiling(items.Count() / (double)pageSize);
+        if (pageIndex < 1)
+        {
+            PageIndex = 1;
+        }
+        else if (pageIndex > TotalPages)
+        {
+            PageIndex = TotalPages;
+        }
+        else
+        {
+            PageIndex = pageIndex;
+        }
+
+        this.AddRange(items.Skip((PageIndex - 1) * pageSize).Take(pageSize).ToList());
+    }
+
 
     public bool HasPreviousPage
     {
@@ -52,13 +92,13 @@ public class PaginatedList<T> : List<T>
         // Previous link
         if (HasPreviousPage)
         {
-            paginationString += $"<a href=\"{Route}?page={PageIndex - 1}\"> &lt; </a> ";
+            paginationString += $"<a href=\"{Route}?page={PageIndex - 1}{QueryString}\"> &lt; </a> ";
         }
 
         // First page link
         if (PageIndex - linksToLeftAndRight > 1)
         {
-            paginationString += $"<a href=\"{Route}?page=1\">1</a> ";
+            paginationString += $"<a href=\"{Route}?page=1{QueryString}\">1</a> ";
             if (PageIndex - linksToLeftAndRight > 2)
             {
                 paginationString += "<span>...</span>";
@@ -74,7 +114,7 @@ public class PaginatedList<T> : List<T>
             }
             else
             {
-                paginationString += $"<a href=\"{Route}?page={i}\">{i}</a> ";
+                paginationString += $"<a href=\"{Route}?page={i}{QueryString}\">{i}</a> ";
             }
         }
 
@@ -85,15 +125,16 @@ public class PaginatedList<T> : List<T>
             {
                 paginationString += "<span>...</span>";
             }
-            paginationString += $"<a href=\"{Route}?page={TotalPages}\">{TotalPages}</a> ";
+            paginationString += $"<a href=\"{Route}?page={TotalPages}{QueryString}\">{TotalPages}</a> ";
         }
 
         // Next link
         if (HasNextPage)
         {
-            paginationString += $"<a href=\"{Route}?page={PageIndex + 1}\"> &gt; </a>";
+            paginationString += $"<a href=\"{Route}?page={PageIndex + 1}{QueryString}\"> &gt; </a>";
         }
 
         return paginationString;
     }
+
 }

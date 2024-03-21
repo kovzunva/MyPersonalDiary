@@ -8,6 +8,7 @@ namespace MyPersonalDiary.Data
     public class ApplicationDbContext : IdentityDbContext<User>
     {
         public DbSet<Post> Posts { get; set; }
+        public DbSet<RegistrationCode> RegistrationCodes { get; set; }
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {

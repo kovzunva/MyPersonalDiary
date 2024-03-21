@@ -1,0 +1,59 @@
+﻿@model MyPersonalDiary.Models.RegisterViewModel
+@{
+    Layout = "~/Views/Shared/_LayoutGuest.cshtml";
+}
+
+<div class="col-sm-12 col-md-8 col-lg-6">
+    <h1>Реєстрація</h1>
+
+    <form asp-action="Register" method="post">
+        <div asp-validation-summary="All" class="text-danger"></div>
+
+        <div class="form-group mb-1">
+            <label asp-for="Email" class="mb-1"></label>
+            <input asp-for="Email" class="form-control" />
+            <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-1">
+            <label asp-for="NickName" class="mb-1"></label>
+            <input asp-for="NickName" class="form-control" />
+            <span asp-validation-for="NickName" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-1">
+            <label asp-for="Password" class="mb-1"></label>
+            <input asp-for="Password" type="password" class="form-control" />
+            <span asp-validation-for="Password" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-1">
+            <label asp-for="ConfirmPassword" class="mb-1"></label>
+            <input asp-for="ConfirmPassword" type="password" class="form-control" />
+            <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="UserCaptcha" class="mb-1">Капча</label>
+            <div class="row">
+                <div class="col-auto">
+                    <img src="@Url.Action("GenerateCaptcha", "Captcha")" class="captchaImage" alt="Captcha" />
+                </div>
+                <div class="col">
+                    <input asp-for="UserCaptcha" class="form-control captchaInput" />
+                </div>
+            </div>
+            <span asp-validation-for="UserCaptcha" class="text-danger"></span>
+        </div>
+
+        <div class="row">
+            <div class="col text-end">
+                <a asp-controller="Account" asp-action="Login">Уже є акаунт?</a>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Зареєструватися</button>
+            </div>
+        </div>
+    </form>
+
+</div>

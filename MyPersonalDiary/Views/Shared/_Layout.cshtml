@@ -1,4 +1,7 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<User> SignInManager
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -7,6 +10,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/MyPersonalDiary.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>
 <body>
     <header>
@@ -22,50 +26,57 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Posts" asp-action="Create">Додати запис</a>
                         </li>
-                        @* <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Posts" asp-action="Index">Пости</a>
-                        </li> *@
+                        @if (User.IsInRole("admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Admin" asp-action="Index">Адмінка</a>
+                            </li>
+                        }
                     </ul>
                     <partial name="_LoginPartial" />
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            <div class="mx-auto col-md-12 col-lg-10">
-                @* Помилки *@
-                @if (ViewBag.ValidationErrors != null)
-                {
-                    <div class="alert alert-danger">
-                        <h4>Помилки валідації:</h4>
-                        <ul>
-                            @foreach (var error in ViewBag.ValidationErrors)
-                            {
-                                <li>@error</li>
-                            }
-                        </ul>
-                    </div>
-                }
-                @if (ViewBag.Message != null)
-                {
-                    <div class="alert alert-danger">
-                        <h4>Повідомлення:</h4>
-                        @ViewBag.Message
-                    </div>
-                }
-                @RenderBody()
-            </div>
-        </main>
-    </div>
+    <main role="main" id="main" class="container pb-3">
+        <div class="mx-auto col-md-12 col-lg-10">
+            @* Помилки *@
+            @if (ViewBag.ValidationErrors != null)
+            {
+                <div class="alert alert-danger">
+                    <h4>Помилки валідації:</h4>
+                    <ul>
+                        @foreach (var error in ViewBag.ValidationErrors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </div>
+            }
+            @if (ViewBag.Message != null)
+            {
+                <div class="alert alert-danger">
+                    <h4>Повідомлення:</h4>
+                    @ViewBag.Message
+                </div>
+            }
+            @RenderBody()
+        </div>
+    </main>
 
-    <footer class="footer text-muted">
+    <footer class="text-muted">
         <div class="container text-center">
             &copy; 2024 - Мій особистий щоденник - <a asp-area="" asp-controller="Home" asp-action="Privacy">Політика конфіденційності</a>
+            @if (SignInManager.IsSignedIn(User))
+            {
+                <span>|</span>
+                <a asp-controller="Account" asp-action="Delete">Видалити акаунт</a>
+            }
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

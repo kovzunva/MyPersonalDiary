@@ -38,20 +38,25 @@ html {
   box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
-html {
-  position: relative;
-  min-height: 100%;
+html, body {
+    min-height: 100vh;
 }
 
 body {
-  margin-bottom: 60px;
-  background: var(--base-gradient);
+    background: var(--base-gradient);
+    display: flex;
+    flex-direction: column;
 }
 
 main {
-    padding-left: 30px;
     color: var(--anti-base-color);
+    flex: 1;
 }
+
+footer {
+    padding: 20px;
+}
+
 
 
 .item-box {
@@ -137,4 +142,16 @@ a.no-base-link {
     background-color: var(--anti-base-color-transparent);
     box-shadow: var(--base-shadow);
     border-radius: 5px;
+}
+
+#codeList li:hover{
+    cursor:pointer;
+}
+
+.captchaImage{
+    height: 2.4rem;
+    min-width: 150px;
+}
+.captchaInput {
+    min-width: 150px;
 }
