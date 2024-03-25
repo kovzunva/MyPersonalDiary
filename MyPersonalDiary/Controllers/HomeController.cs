@@ -29,9 +29,14 @@ namespace MyPersonalDiary.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
+        [Authorize]
         public IActionResult NotFoundError()
         {
             return View("NotFound");
+        }
+        public IActionResult NotFoundGuestError()
+        {
+            return View("NotFoundGuest");
         }
     }
 

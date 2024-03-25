@@ -1,0 +1,11 @@
+﻿@model ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+    Layout = "~/Views/Shared/_LayoutGuest.cshtml";
+}
+
+<div class="text-center">
+    <h1 class="text-danger">Помилка</h1>
+    <h2 class="text-danger">@TempData["ErrorMessage"]</h2>
+    <a asp-controller="Account" asp-action="Login">Уже є акаунт?</a>
+</div>

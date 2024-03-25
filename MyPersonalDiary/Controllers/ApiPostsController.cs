@@ -35,10 +35,16 @@ namespace MyPersonalDiary.Controllers
             encryptionService = new EncryptionService(configuration);
         }
 
-        [HttpGet("{user_id}")]
-        public IEnumerable<Post> GetPosts(string user_id)
+        [HttpGet]
+        public ActionResult<IEnumerable<Post>> GetPosts([FromHeader(Name = "api_key")] string api_key)
         {
-            var posts = _context.Posts.Where(post => post.UserId == user_id).ToList();
+            var user = _context.Users.FirstOrDefault(u => u.ApiKey == api_key);
+            if (user == null)
+            {
+                return Unauthorized();
+            }
+
+            var posts = _context.Posts.Where(post => post.UserId == user.Id).ToList();
             foreach (var post in posts)
             {
                 post.Content = encryptionService.Decrypt(post.Content);
@@ -47,12 +53,18 @@ namespace MyPersonalDiary.Controllers
             return posts;
         }
 
-        [HttpGet("{user_id}/{id}")]
-        public ActionResult<Post> GetPost(string user_id, int id)
+        [HttpGet("{id}")]
+        public ActionResult<Post> GetPost([FromHeader(Name = "api_key")] string api_key, int id)
         {
+            var user = _context.Users.FirstOrDefault(u => u.ApiKey == api_key);
+            if (user == null)
+            {
+                return Unauthorized();
+            }
+
             var post = _context.Posts.Find(id);
 
-            if (post == null || post.UserId != user_id)
+            if (post == null || post.UserId != user.Id)
             {
                 return NotFound();
             }
@@ -64,9 +76,15 @@ namespace MyPersonalDiary.Controllers
         }
 
         [HttpPost]
-        public ActionResult<Post> CreatePost(Post post)
+        public ActionResult<Post> CreatePost([FromHeader(Name = "api_key")] string api_key, [FromBody] Post post, IFormFile? imageFile)
         {
-            if (string.IsNullOrWhiteSpace(post.UserId) || string.IsNullOrWhiteSpace(post.Content))
+            var user = _context.Users.FirstOrDefault(u => u.ApiKey == api_key);
+            if (user == null)
+            {
+                return Unauthorized();
+            }
+
+            if (post == null || string.IsNullOrWhiteSpace(post.Content))
             {
                 ModelState.AddModelError(string.Empty, "Не заповнені обов'язкові поля");
                 return BadRequest(ModelState);
@@ -78,32 +96,75 @@ namespace MyPersonalDiary.Controllers
                 return BadRequest(ModelState);
             }
 
+            post.UserId = user.Id;
             post.CreatedAt = DateTime.Now;
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                post.ImagePath = SaveImage(imageFile);
+            }
+
+            // Шифрування
             post.Content = encryptionService.Encrypt(post.Content);
             post.ImagePath = encryptionService.Encrypt(post.ImagePath);
+
             _context.Posts.Add(post);
             _context.SaveChanges();
 
             return CreatedAtAction(nameof(GetPost), new { id = post.Id }, post);
         }
 
-        [HttpPut("{user_id}/{id}")]
-        public IActionResult UpdatePost(string user_id, int id, Post post)
+        private string SaveImage(IFormFile imageFile)
         {
-            if (id != post.Id || post.UserId != user_id)
+            var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads");
+            var uniqueFileName = Guid.NewGuid().ToString() + "_" + imageFile.FileName;
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                using (var image = Image.Load(imageFile.OpenReadStream()))
+                {
+                    // Перевіряємо розмір картинки та стискаємо, якщо потрібно
+                    if (image.Width > 1024 || image.Height > 1024)
+                    {
+                        image.Mutate(x => x.Resize(new ResizeOptions
+                        {
+                            Size = new Size(1024, 1024),
+                            Mode = ResizeMode.Max
+                        }));
+                    }
+
+                    // Зберігаємо оптимізовану версію в файловий потік
+                    image.Save(fileStream, new JpegEncoder { Quality = 80 });
+                }
+            }
+
+            return uniqueFileName;
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> EditPost([FromHeader(Name = "api_key")] string api_key, int id, [FromBody] Post post, IFormFile? imageFile)
+        {
+            var user = _context.Users.FirstOrDefault(u => u.ApiKey == api_key);
+            if (user == null)
+            {
+                return Unauthorized();
+            }
+
+            if (post == null || id != post.Id || post.UserId != user.Id)
             {
                 return BadRequest();
             }
 
-            if (DateTime.Now.Subtract(post.CreatedAt).Days > 2)
+            var existingPost = await _context.Posts.FirstOrDefaultAsync(p => p.Id == id);
+
+            if (existingPost == null)
             {
-                ModelState.AddModelError(string.Empty, "Не можна оновлювати пост, який старший двох днів");
-                return BadRequest(ModelState);
+                return NotFound();
             }
 
-            if (string.IsNullOrWhiteSpace(post.UserId) || string.IsNullOrWhiteSpace(post.Content))
+            if (DateTime.Now.Subtract(existingPost.CreatedAt).Days > 2)
             {
-                ModelState.AddModelError(string.Empty, "Не заповнені обов'язкові поля");
+                ModelState.AddModelError(string.Empty, "Не можна редагувати пост, який старший двох днів");
                 return BadRequest(ModelState);
             }
 
@@ -113,34 +174,72 @@ namespace MyPersonalDiary.Controllers
                 return BadRequest(ModelState);
             }
 
-            post.Content = encryptionService.Encrypt(post.Content);
-            post.ImagePath = encryptionService.Encrypt(post.ImagePath);
-            _context.Entry(post).State = EntityState.Modified;
-            _context.SaveChanges();
+            try
+            {
+                // Видалення старої картинки
+                if (!string.IsNullOrEmpty(existingPost.ImagePath) && imageFile != null && imageFile.Length > 0)
+                {
+                    var oldImagePath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads",
+                        encryptionService.Decrypt(existingPost.ImagePath));
+                    if (System.IO.File.Exists(oldImagePath))
+                    {
+                        System.IO.File.Delete(oldImagePath);
+                    }
+                }
 
-            return NoContent();
+                // Оновлення і збереження нової картинки, якщо вона надійшла
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    var newImagePath = SaveImage(imageFile);
+                    post.ImagePath = encryptionService.Encrypt(newImagePath);
+                    existingPost.ImagePath = post.ImagePath;
+                }
+                else
+                {
+                    _context.Entry(existingPost).Property(x => x.ImagePath).IsModified = false;
+                }
+
+                existingPost.Content = encryptionService.Encrypt(post.Content);
+
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                throw;
+            }
+            return Content("Пост успішно відредагованр");
         }
 
-        [HttpDelete("{user_id}/{id}")]
-        public IActionResult DeletePost(string user_id, int id)
+
+        [HttpDelete("{id}")]
+        public IActionResult DeletePost([FromHeader(Name = "api_key")] string api_key, int id)
         {
+            var user = _context.Users.FirstOrDefault(u => u.ApiKey == api_key);
+            if (user == null)
+            {
+                return Unauthorized();
+            }
+
             var post = _context.Posts.Find(id);
 
-            if (post == null || post.UserId != user_id)
+            if (post == null || post.UserId != user.Id)
             {
                 return NotFound();
             }
 
-            if (DateTime.Now.Subtract(post.CreatedAt).Days > 2)
+            if (!string.IsNullOrEmpty(post.ImagePath))
             {
-                ModelState.AddModelError(string.Empty, "Не можна видаляти пост, який старший двох днів");
-                return BadRequest(ModelState);
+                var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads",
+                            encryptionService.Decrypt(post.ImagePath));
+                if (System.IO.File.Exists(imagePath))
+                {
+                    System.IO.File.Delete(imagePath);
+                }
             }
-
             _context.Posts.Remove(post);
             _context.SaveChanges();
 
-            return NoContent();
+            return Content("Пост успішно видалено");
         }
     }
 }

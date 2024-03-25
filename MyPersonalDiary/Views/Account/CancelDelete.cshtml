@@ -1,12 +1,20 @@
 ﻿@model MyPersonalDiary.Models.User
+@{
+    Layout = "~/Views/Shared/_LayoutGuest.cshtml";
+}
 
-<h2>Видалення акаунту</h2>
+<div>
+    <h2>Видалення акаунту</h2>
 
-<form asp-action="CancelDelete" method="post">
-    @Html.AntiForgeryToken()
+    <form asp-action="CancelDelete" method="post">
+        @Html.AntiForgeryToken()
 
-    <div>
-        <p>Ваш акаунт буде видалено (@Model.DeleteAt)</p>
-        <button type="submit" class="btn btn-danger">Скасувати видалення</button>
-    </div>
-</form>
+        <div>
+            <p>Ваш акаунт буде видалено (@Model.DeleteAt)</p>
+            <button type="submit" class="btn btn-danger">Скасувати видалення</button>
+        </div>
+    </form>
+    <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+        <button type="submit" class="btn btn-link">Вийти з акаунту</button>
+    </form>
+</div>

@@ -9,6 +9,7 @@ using MyPersonalDiary.Services;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing;
+using Microsoft.AspNetCore.Authorization;
 
 namespace MyPersonalDiary.Controllers
 {
@@ -40,7 +41,7 @@ namespace MyPersonalDiary.Controllers
             {
                 var errorMessage = "Неправильний код реєстрації.";
                 TempData["ErrorMessage"] = errorMessage;
-                return View("Error");
+                return View("ErrorGuest");
             }
         }
 
@@ -61,7 +62,8 @@ namespace MyPersonalDiary.Controllers
                 // Код реєстрації валідний, обробка реєстрації
                 if (ModelState.IsValid)
                 {
-                    var user = new User { UserName = model.Email, Email = model.Email, NickName = model.NickName };
+                    var user = new User { UserName = model.Email, Email = model.Email, NickName = model.NickName,
+                        ApiKey = GenerateApiKey() };
                     var result = await _userManager.CreateAsync(user, model.Password);
 
                     if (result.Succeeded)
@@ -90,8 +92,15 @@ namespace MyPersonalDiary.Controllers
             {
                 var errorMessage = "Неправильний код реєстрації.";
                 TempData["ErrorMessage"] = errorMessage;
-                return View("Error");
+                return View("ErrorGuest");
             }
+        }
+
+        public static string GenerateApiKey()
+        {
+            string apiKey = Guid.NewGuid().ToString("N").Substring(0, 32);
+
+            return apiKey;
         }
 
         [HttpGet]
@@ -121,6 +130,7 @@ namespace MyPersonalDiary.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         public IActionResult Delete()
         {
             return View();
@@ -128,6 +138,7 @@ namespace MyPersonalDiary.Controllers
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> DeleteConfirmed()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -143,6 +154,7 @@ namespace MyPersonalDiary.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         public async Task<IActionResult> CancelDelete()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -157,6 +169,7 @@ namespace MyPersonalDiary.Controllers
 
         [HttpPost, ActionName("CancelDelete")]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> CancelDeleteConfirmed()
         {
             var user = await _userManager.GetUserAsync(User);

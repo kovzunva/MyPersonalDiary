@@ -16,13 +16,19 @@ namespace MyPersonalDiary.Middleware
 
         public async Task Invoke(HttpContext context)
         {
-            await _next(context);
-
             if (context.Response.StatusCode == 404)
             {
+                if (!context.User.Identity.IsAuthenticated)
+                {
+                    context.Response.Redirect("/Home/NotFoundGuestError");
+                    return;
+                }
+
                 context.Response.Redirect("/Home/NotFoundError");
                 return;
             }
+
+            await _next(context);
         }
     }
 }
