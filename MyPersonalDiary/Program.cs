@@ -1,12 +1,15 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MyPersonalDiary.Data;
+using MyPersonalDiary.Interfaces;
 using MyPersonalDiary.Middleware;
+using MyPersonalDiary.Models;
 using MyPersonalDiary.Services;
+using MyPersonalDiary.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
@@ -14,8 +17,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// Конфігурація Identity
-builder.Services.AddDefaultIdentity<MyPersonalDiary.Models.User>(options => {
+// Identity
+builder.Services.AddDefaultIdentity<User>(options => {
     options.SignIn.RequireConfirmedAccount = false;
     options.SignIn.RequireConfirmedEmail = false;
 })
@@ -30,11 +33,22 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/Account/Logout";
 });
 
-/* Додаткові власні сервіси */
+/* Services */
 builder.Services.Configure<MyPersonalDiary.AppSettings>(builder.Configuration.GetSection("AppSettings"));
-builder.Services.AddScoped<AccountDeletionService>();
+builder.Services.AddScoped<IEncryptionService, EncryptionService>();
+builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IPostsService, PostsService>();
+builder.Services.AddScoped<IRegistrationCodesService, RegistrationCodesService>();
+builder.Services.AddScoped<ICaptchaService, CaptchaService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
 
-// Налаштування сесій
+/* Validator Services */
+builder.Services.AddTransient<IValidator<Post>, PostValidator>();
+
+/* Background Services */
+builder.Services.AddHostedService<AccountDeletionBackgroundService>();
+
+// Session
 builder.Services.AddSession(options =>
 {
     options.Cookie.Name = ".MyPersonalDiary.Session";
@@ -55,14 +69,11 @@ else
     app.UseHsts();
 }
 
-
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-
-
 app.UseSession();
 
 app.MapControllerRoute(

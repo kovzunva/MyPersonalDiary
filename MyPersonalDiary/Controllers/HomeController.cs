@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using MyPersonalDiary.Data;
 using MyPersonalDiary.Models;
+using MyPersonalDiary.ViewModels;
 using MyPersonalDiary.Services;
 using System.Diagnostics;
 

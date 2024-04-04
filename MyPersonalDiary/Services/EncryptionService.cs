@@ -1,9 +1,10 @@
 ﻿using System.Text;
 using System.Security.Cryptography;
+using MyPersonalDiary.Interfaces;
 
 namespace MyPersonalDiary.Services
 {
-    public class EncryptionService
+    public class EncryptionService : IEncryptionService
     {
         private readonly IConfiguration _configuration;
         private readonly string key;

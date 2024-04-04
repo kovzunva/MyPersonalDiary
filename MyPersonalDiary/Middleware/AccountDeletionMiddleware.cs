@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MyPersonalDiary.Controllers;
 using MyPersonalDiary.Data;
+using MyPersonalDiary.Interfaces;
 using MyPersonalDiary.Models;
 using MyPersonalDiary.Services;
 using System;
@@ -21,43 +22,20 @@ namespace MyPersonalDiary.Middleware
             _next = next;
         }
 
-        public async Task Invoke(HttpContext context, AccountDeletionService accountDeletionService, UserManager<User> userManager)
+        public async Task Invoke(HttpContext context, IAccountService accountService)
         {
-            var user = await userManager.GetUserAsync(context.User);
+            var user = await accountService.GetCurrentUserAsync();
 
             if (user != null)
             {
                 var currentUrl = context.Request.Path;
-                if (currentUrl != "/Identity/Account/Logout")
+                var deleteAt = user.DeleteAt;
+                if (deleteAt != null && currentUrl != "/Identity/Account/Logout" && 
+                    currentUrl != "/Account/CancelDelete")
                 {
-                    var deleteAt = user.DeleteAt;
-                    if (deleteAt != null)
-                    {
-                        if (DateTimeOffset.Now >= deleteAt)
-                        {
-                            var isDeleted = await accountDeletionService.DeleteAccount(user);
-                            if (isDeleted)
-                            {
-                                context.Response.Redirect("/");
-                                return;
-                            }
-                            else
-                            {
-                                context.Response.Redirect("/Error");
-                                return;
-                            }
-                        }
-                        else
-                        {
+                    context.Response.Redirect("/Account/CancelDelete");
+                    return;
 
-                            if (currentUrl != "/Account/CancelDelete")
-                            {
-                                context.Response.Redirect("/Account/CancelDelete");
-                                return;
-                            }
-                        }
-
-                    }
                 }
             }
 

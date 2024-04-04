@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Routing;
+using MyPersonalDiary.Models;
 using System;
 
 namespace MyPersonalDiary.Middleware
@@ -14,7 +16,7 @@ namespace MyPersonalDiary.Middleware
             _next = next;
         }
 
-        public async Task Invoke(HttpContext context)
+        public async Task Invoke(HttpContext context, SignInManager<User> _signInManager)
         {
             if (context.Response.StatusCode == 404)
             {

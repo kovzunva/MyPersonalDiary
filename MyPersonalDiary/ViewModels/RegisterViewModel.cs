@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MyPersonalDiary.Models
+namespace MyPersonalDiary.ViewModels
 {
     public class RegisterViewModel
     {

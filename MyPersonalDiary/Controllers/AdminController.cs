@@ -1,40 +1,32 @@
-﻿using System;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MyPersonalDiary.Data;
-using MyPersonalDiary.Models;
-
+using MyPersonalDiary.Interfaces;
 
 namespace MyPersonalDiary.Controllers
 {
     [Authorize(Roles = "admin")]
     public class AdminController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IRegistrationCodesService _registrationCodesService;
 
-        public AdminController(ApplicationDbContext context)
+        public AdminController(IRegistrationCodesService registrationCodesService)
         {
-            _context = context;
+            _registrationCodesService = registrationCodesService;
         }
 
         public async Task<IActionResult> Index()
         {
-            var registrationCodes = await _context.RegistrationCodes.ToListAsync();
+            var registrationCodes = await _registrationCodesService.GetRegistrationCodesAsync();
             return View(registrationCodes);
         }
 
         [HttpPost]
         public async Task<IActionResult> Create()
         {
-            string newCode = RegistrationCode.GenerateRegistrationCode();
-            var newRegistrationCode = new RegistrationCode { Code = newCode };
-            _context.RegistrationCodes.Add(newRegistrationCode);
-            await _context.SaveChangesAsync();
+            string newCode = await _registrationCodesService.CreateRegistrationCodeAsync();
+            string newLink = Url.Action("Register", "Account", new { registrationCode = newCode }, "https");
 
-            string link = Url.Action("Register", "Account", new { registrationCode = newCode }, "https");
-
-            return Json(new { code = newCode, link = link });
+            return Json(new { code = newCode, link = newLink });
         }
 
     }
